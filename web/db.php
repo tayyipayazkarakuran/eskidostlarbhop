@@ -1,10 +1,10 @@
 <?php
 
-define('DB_HOST', '127.0.0.1');
+define('DB_HOST', '45.143.11.212');
 define('DB_PORT', 3306);
-define('DB_NAME', 'bhop_timer');
-define('DB_USER', 'bhop_timer');
-define('DB_PASS', 'change_me');
+define('DB_NAME', 'bhop');
+define('DB_USER', 'bhopuser1');
+define('DB_PASS', 'Karakura123');
 define('DB_CHARSET', 'utf8');
 
 define('PRO_LIMIT', 15);
@@ -85,7 +85,52 @@ function db_ensure_schema($pdo)
         PRIMARY KEY (map, mode, authid)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8");
 
+    db_add_mode_column($pdo, 'bhop_records');
+    db_add_mode_column($pdo, 'bhop_best');
+    db_fix_best_primary_key($pdo);
+
     return true;
+}
+
+function db_has_column($pdo, $table, $column)
+{
+    try {
+        $stmt = $pdo->prepare("SHOW COLUMNS FROM `{$table}` LIKE :col");
+        $stmt->execute(['col' => $column]);
+        return $stmt->fetch() !== false;
+    } catch (PDOException $e) {
+        return false;
+    }
+}
+
+function db_add_mode_column($pdo, $table)
+{
+    if (!db_has_column($pdo, $table, 'mode')) {
+        try {
+            $pdo->exec("ALTER TABLE `{$table}` ADD COLUMN mode TINYINT UNSIGNED NOT NULL DEFAULT 0");
+        } catch (PDOException $e) {
+            // Column may already exist from a concurrent request
+        }
+    }
+}
+
+function db_fix_best_primary_key($pdo)
+{
+    if (!db_has_column($pdo, 'bhop_best', 'mode')) {
+        return;
+    }
+
+    try {
+        $rows = $pdo->query("SHOW INDEX FROM bhop_best WHERE Key_name = 'PRIMARY'")->fetchAll(PDO::FETCH_ASSOC);
+        $pk_cols = array_map(function ($r) { return $r['Column_name']; }, $rows);
+        sort($pk_cols);
+        $has_mode = in_array('mode', $pk_cols);
+        if (!$has_mode) {
+            $pdo->exec("ALTER TABLE bhop_best DROP PRIMARY KEY, ADD PRIMARY KEY (map, mode, authid)");
+        }
+    } catch (PDOException $e) {
+        // PK may already be correct
+    }
 }
 
 function get_pro15($pdo, $map, $mode)

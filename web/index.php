@@ -20,11 +20,10 @@ if ($is_motd) {
 }
 
 $pdo = db_connect();
-$db_ok = db_tables_exist($pdo);
-if (!$db_ok && $pdo) {
+if ($pdo) {
     db_ensure_schema($pdo);
-    $db_ok = db_tables_exist($pdo);
 }
+$db_ok = db_tables_exist($pdo);
 ?>
 <!DOCTYPE html>
 <html>

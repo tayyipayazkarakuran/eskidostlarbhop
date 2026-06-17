@@ -10,11 +10,10 @@ $mode_name = mode_label($mode_id);
 $map_safe  = esc($map);
 
 $pdo    = db_connect();
-$db_ok  = db_tables_exist($pdo);
-if (!$db_ok && $pdo) {
+if ($pdo) {
     db_ensure_schema($pdo);
-    $db_ok = db_tables_exist($pdo);
 }
+$db_ok  = db_tables_exist($pdo);
 $records = $db_ok ? get_pro15($pdo, $map, $mode_id) : [];
 $wr      = $db_ok ? get_wr_for_map($pdo, $map, $mode_id) : null;
 ?>
