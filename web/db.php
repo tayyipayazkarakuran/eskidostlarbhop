@@ -4,7 +4,7 @@ define('DB_HOST', '45.143.11.212');
 define('DB_PORT', 3306);
 define('DB_NAME', 'bhop');
 define('DB_USER', 'bhopuser1');
-define('DB_PASS', 'Karakura123');
+define('DB_PASS', 'password');
 define('DB_CHARSET', 'utf8');
 
 define('PRO_LIMIT', 15);
