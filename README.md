@@ -357,6 +357,97 @@ When `bhop_motd_web_enabled` is `1`, `/pro15` and `/top15` redirect to the confi
 
 Pro15 records are stored locally in `addons/amxmodx/data/bhop_timer/` files and optionally synced to MySQL when `bhop_sql_enabled` is `1`.
 
+## Web Leaderboard
+
+A PHP web leaderboard is included in `web/`. It reads records from the same MySQL database the plugin writes to and serves two views:
+
+- **MOTD view** (`pro15.php?map=<mapname>&mode=<mode>`) -- minimal HTML designed for the CS 1.6 MOTD panel. This is what players see when they type `/pro15` or `/top15` in-game.
+- **Full site** (`index.php`) -- all maps organized in a card grid, with mode tabs (Normal / Low Gravity / Double Jump). Players not in the game can browse the full leaderboard from a browser.
+
+The in-game plugin uses `bhop_motd_web_url` to redirect the MOTD to the web URL. When a player types `/pro15`, the plugin generates a meta refresh redirect to:
+
+```
+http://YOUR_SERVER_ADDRESS/pro15.php?map=bhop_m_ramp2&mode=normal
+```
+
+### Web Setup
+
+1. Copy the `web/` folder to your PHP-enabled web server.
+2. Edit `web/db.php` and set your MySQL credentials:
+
+   ```php
+   define('DB_HOST', '127.0.0.1');
+   define('DB_PORT', 3306);
+   define('DB_NAME', 'bhop_timer');
+   define('DB_USER', 'bhop_timer');
+   define('DB_PASS', 'change_me');
+   ```
+
+3. Make sure the MySQL database and tables exist (the plugin creates them automatically, or run `dist/bmod-server/docs/bhop_timer_mysql_setup.sql`).
+4. Set `bhop_motd_web_url` in `bhop_timer.cfg` to point to `pro15.php` on your server:
+
+   ```cfg
+   bhop_motd_web_url "http://YOUR_SERVER_ADDRESS/pro15.php"
+   ```
+
+5. If you want clean URLs, enable `mod_rewrite` and use the included `.htaccess`:
+
+   ```
+   /map/bhop_m_ramp2/normal    -> index.php?map=bhop_m_ramp2&mode=normal
+   /pro15?map=bhop_m_ramp2&mode=normal  -> pro15.php?map=bhop_m_ramp2&mode=normal
+   ```
+
+### CS 1.6 MOTD Compatibility
+
+The MOTD panel in CS 1.6 uses an embedded Internet Explorer (Trident) engine with significant limitations:
+
+- No modern CSS (no flexbox, no grid, no `position: fixed`)
+- No JavaScript in many client configurations
+- Small viewport (~640x480)
+- `meta http-equiv="refresh"` works for redirecting to an external URL
+
+The `pro15.php` template uses only inline CSS, table-based layout, and no JavaScript. All styling is embedded in the HTML response so it renders correctly inside the GoldSrc MOTD panel.
+
+### Database Schema
+
+The plugin creates these tables automatically:
+
+```sql
+CREATE TABLE bhop_records (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    record_key VARCHAR(160) NOT NULL UNIQUE,
+    map VARCHAR(64) NOT NULL,
+    authid VARCHAR(35) NOT NULL,
+    name VARCHAR(32) NOT NULL,
+    mode TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    time_ms INT UNSIGNED NOT NULL,
+    created_at INT UNSIGNED NOT NULL
+);
+
+CREATE TABLE bhop_best (
+    map VARCHAR(64) NOT NULL,
+    authid VARCHAR(35) NOT NULL,
+    name VARCHAR(32) NOT NULL,
+    mode TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    best_time_ms INT UNSIGNED NOT NULL,
+    updated_at INT UNSIGNED NOT NULL,
+    PRIMARY KEY (map, mode, authid)
+);
+```
+
+The `mode` column uses `0` for Normal, `1` for Low Gravity, and `2` for Double Jump.
+
+### Web Directory
+
+```
+web/
+  .htaccess          Apache mod_rewrite rules for clean URLs
+  db.php             MySQL connection, schema, and query helpers
+  index.php          Full leaderboard site (all maps, mode tabs, WR banner)
+  pro15.php          MOTD-compatible Pro15 view for in-game use
+  style.css          Site-wide styles (dark theme, CS 1.6 aesthetic)
+```
+
 ## Replay Sync
 
 `tools/replay-sync.ps1` watches the AMXX replay directory and uploads changed WR replay files to a compatible API endpoint.
