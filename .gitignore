@@ -1,0 +1,23 @@
+# Local/private configuration
+addons/amxmodx/configs/bhop_timer_private.cfg
+web/.dev.vars
+
+# Build and runtime cache
+dist/
+.wrangler/
+htmlcache/
+debug.log
+steam_appid.txt
+web/node_modules/
+web/dist/
+web/.wrangler/
+web/.wrangler-build/
+web/worker-configuration.d.ts
+
+# Downloaded vendor/runtime archives
+tools/runtime-downloads/
+addons/amxmodx/*.zip
+addons/amxmodx/*.rar
+
+# AMXX compile artifacts in source folders
+addons/amxmodx/scripting/*.amxx
