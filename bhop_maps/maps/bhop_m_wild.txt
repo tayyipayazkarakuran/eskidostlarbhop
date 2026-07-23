@@ -1,0 +1,13 @@
+Wild v1.1 - Bunnyjump Mod Map
+by Zerotech (petersam1980@gmail.com)
+
+Counter-Terrorists: 
+Navigate all paths using Bunnyjump 
+techniques and skills in order 
+to complete the map.
+
+Map Created v1.0 in 19/04/2011
+Map Updated v1.1 in 19/09/2012
+
+NOTE: A Bunnujump Plugin is required 
+      to play the Bunnyjump Mod Map.

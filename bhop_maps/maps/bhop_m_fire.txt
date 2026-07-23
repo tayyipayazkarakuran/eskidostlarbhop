@@ -1,0 +1,12 @@
+Fire - Bunnyjump Mod Map
+by Zerotech (petersam1980@gmail.com)
+
+Counter-Terrorists:
+Navigate all paths using Bunnyjump
+techniques and skills in order to
+complete the map.
+
+Version 1.0 created in 06/09/2012
+
+Note: A Bunnyjump plugin is required
+      to play.

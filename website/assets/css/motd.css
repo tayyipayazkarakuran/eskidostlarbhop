@@ -1,0 +1,27 @@
+html, body { margin: 0; padding: 0; background: #050505; color: #e8e8e8; font-family: Arial, Helvetica, sans-serif; font-size: 10px; }
+body { padding: 5px; }
+.frame { width: 98%; max-width: 620px; margin: 0 auto; border: 1px solid #333; background: #0d0d0d; }
+.nav { padding: 4px; border-bottom: 1px solid #333; text-align: center; background: #171717; }
+.nav a { display: inline-block; margin: 0 2px; padding: 2px 7px; border: 1px solid #444; color: #ddd; text-decoration: none; font-size: 9px; font-weight: bold; }
+h1 { margin: 6px 6px 0; color: #fff; font-size: 15px; line-height: 18px; text-align: center; text-transform: uppercase; }
+.subtitle { margin: 0 6px 5px; color: #888; font-size: 9px; line-height: 13px; text-align: center; }
+.modes { width: 98%; margin: 0 auto 4px; border-collapse: collapse; }
+.modes td { padding: 0; border: 1px solid #383838; text-align: center; }
+.modes a { display: block; padding: 2px 1px; color: #aaa; text-decoration: none; font-size: 8px; font-weight: bold; }
+.modes td.on { background: #eee; }
+.modes td.on a { color: #050505; }
+.board { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.board th { padding: 3px 5px; border-top: 1px solid #333; border-bottom: 1px solid #444; background: #191919; color: #999; font-size: 8px; text-align: left; text-transform: uppercase; }
+.board td { height: 17px; padding: 1px 5px; overflow: hidden; border-bottom: 1px solid #222; color: #ddd; font-size: 10px; line-height: 15px; text-overflow: ellipsis; white-space: nowrap; }
+.board tr:nth-child(even) td { background: #111; }
+.board .rank { width: 25px; color: #777; text-align: center; }
+.board .right { width: 92px; text-align: right; }
+.board a { color: #fff; text-decoration: none; }
+.mono { color: #fff !important; font-family: "Courier New", monospace; font-weight: bold; }
+.empty { height: 35px !important; color: #777 !important; text-align: center !important; }
+.profileline { margin: 0 5px 4px; padding: 4px; border: 1px solid #333; background: #151515; }
+.initials { display: inline-block; width: 19px; height: 19px; margin-right: 5px; border: 1px solid #555; background: #eee; color: #111; font-size: 8px; font-weight: bold; line-height: 19px; text-align: center; }
+.profileline b { margin-right: 7px; color: #fff; font-size: 11px; }
+.profileline small { color: #777; font-size: 8px; }
+.sub { margin-left: 5px; color: #777; font-size: 8px; }
+.foot { padding: 3px 5px; color: #555; font-size: 7px; text-align: right; }

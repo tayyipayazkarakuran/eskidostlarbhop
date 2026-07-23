@@ -1,0 +1,24 @@
+Ramp v1.3 - Bunnyjump Map
+
+by Zerotech (petersam1980@gmail.com)
+
+
+
+Counter-Terrorists:
+ Navigate all paths 
+using Bunnyjump 
+techniques and skills 
+in order to
+complete the map.
+
+
+
+Original Created in 2004
+
+Updated v1.0 in 04/05/2008
+
+Updated v1.1 in 09/05/2010
+Updated v1.3 in 12/09/2012
+
+Note: A bunnyjump plugin is required
+to play the map.

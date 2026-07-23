@@ -1,0 +1,14 @@
+Skill2 v1.1 - Bunnyjump Mod Map
+by Zerotech (petersam1980@gmail.com)
+
+Counter-Terrorists:
+Navigate all paths using Bunnyjump
+techniques and skills in order to
+complete the map.
+
+Original Created in 2007
+v1.0 updated in 01/05/2011
+v1.1 updated in 07/09/2012
+
+NOTE: A Bunnujump Plugin is required
+      to play the Bunnyjump Mod Map.

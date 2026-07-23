@@ -1,0 +1,21 @@
+Laboratory v1.1 - Bunnyjump Mod Map 
+
+by Zerotech (petersam1980@gmail.com)
+
+
+
+Counter-Terrorists:
+ 
+Navigate all paths using Bunnyjump 
+techniques and skills in order to
+ 
+complete the map.
+
+
+
+Released v1.0 in 14/05/2012
+
+Updated v1.1 in 14/09/2012
+
+NOTE: A bunnyjump plugin is required
+      to play the map.

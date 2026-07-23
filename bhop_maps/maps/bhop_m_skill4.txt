@@ -1,0 +1,13 @@
+Skill4 v1.1 - Bunnyjump Mod Map
+by Zerotech (petersam1980@gmail.com)
+
+Counter-Terrorists:
+Navigate all paths using Bunnyjump
+techniques and skills in order to
+complete the map.
+
+Version 1.0 on (14/09/2011)
+Version 1.1 on (20/09/2012)
+
+Note: A bunnyjump Plugin is required
+      to play.

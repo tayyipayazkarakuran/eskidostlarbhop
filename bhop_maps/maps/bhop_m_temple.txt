@@ -1,0 +1,13 @@
+Temple v1.1 - Bunnyjump Mod Map
+by Zerotech (petersam1980@gmail.com)
+
+Counter-Terrorists:
+Navigate all paths using Bunnyjump
+techniques and skills in order to
+complete the map.
+
+Map Completed on (30/08/2012)
+v1.1 Updated on (14/09/2012)
+
+Note: A bunnyjump Plugin is required
+      to play.

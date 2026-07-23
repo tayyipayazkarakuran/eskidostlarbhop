@@ -1,0 +1,13 @@
+Ramp2 - Bunnyjump Mod Map 
+by Zerotech (petersam1980@gmail.com)
+
+Counter-Terrorists: 
+Navigate all paths using Bunnyjump 
+techniques and skills in order to 
+complete the map.
+
+Map created on 27-08-2011
+v1.1 updated on 14-09-2012
+
+Note: A bunnyjump plugin is required 
+      to play the map.

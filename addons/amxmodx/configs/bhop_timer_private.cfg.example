@@ -1,0 +1,10 @@
+// Copy to bhop_timer_private.cfg and keep it private.
+bhop_identity_salt "GENERATE_A_RANDOM_64_HEX_SECRET"
+// Production prefix. Use bmod_test_27016_ only on the isolated 27016 test server.
+bhop_sql_prefix "bhop_"
+bhop_sql_enabled "0"
+bhop_sql_host "127.0.0.1:3306"
+bhop_sql_user "bhop_user"
+bhop_sql_pass "CHANGE_ME"
+bhop_sql_db "bhop_timer"
+bhop_sql_timeout "5"
