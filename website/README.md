@@ -1,39 +1,66 @@
-# ESKIDOSTLAR BHOP — standalone website
+# ESKIDOSTLAR BHOP — Standalone Web Portal
 
-Standalone PHP 8 leaderboard portal for the ESKIDOSTLAR BHOP CS 1.6 server. Reads timer data from a MySQL database over read-only PDO connections, queries the game server via the GoldSrc A2S UDP protocol, and renders both the web portal and legacy in-game `/motd` pages.
+A PHP 8.1+ leaderboard website for the ESKIDOSTLAR BHOP CS 1.6 server. Reads timer data from MySQL over a read-only PDO connection, queries the game server via GoldSrc A2S UDP, and renders the web portal and in-game `/motd` pages.
 
-No separate web3 or Node.js project needed. The timer plugin continues writing to the existing MySQL tables; this website only reads.
+No separate web3 or Node.js project is required. The timer plugin continues writing to MySQL; this website only reads.
 
----
+## Features
 
-## Table of contents
-
-- [Requirements](#requirements)
-- [1. Read-only MySQL user](#1-read-only-mysql-user)
-- [2. Configuration](#2-configuration)
-- [3. Local development](#3-local-development)
-- [4. Production routing](#4-production-routing)
-- [5. Health checks and smoke tests](#5-health-checks-and-smoke-tests)
-- [Architecture](#architecture)
-- [API reference](#api-reference)
-- [Security](#security)
-- [Market catalog](#market-catalog)
-
----
+-   **Read-only MySQL** — safe, non-intrusive data access
+-   **GoldSrc A2S UDP** — live server status, player list, current map
+-   **20-second auto-refresh** — server changes reflect on the web in near real-time
+-   **JSON API** — 10 endpoints for status, maps, records, players, economy, market
+-   **Fully responsive** — 560px through 1440px+ viewports
+-   **In-game MOTD** — PRO15, badges, credits, and player profile views
+-   **Player economy profiles** — credit balance, badge progress, inventory
+-   **Dark theme** — monospace + condensed display typefaces, grid layout
+-   **No JavaScript framework** — vanilla JS, CSS, PHP
 
 ## Requirements
 
-- **PHP 8.1+**
-- `pdo_mysql`, `curl`, `json`, `mbstring` PHP extensions
-- PHP `sockets` extension or UDP-capable `stream_socket_client` (for A2S)
-- **MySQL 5.7+ / MariaDB 10.3+**
-- Apache `mod_rewrite`, Nginx front-controller rule, or PHP built-in development server
+-   PHP 8.1+
+-   `pdo_mysql`, `curl`, `json`, `mbstring` PHP extensions
+-   PHP `sockets` extension or UDP-capable `stream_socket_client` (for A2S)
+-   MySQL 5.7+ / MariaDB 10.3+
+-   Apache `mod_rewrite`, Nginx front-controller rule, or PHP built-in development server
 
----
+## Directory Structure
 
-## 1. Read-only MySQL user
+```
+website/
+  index.php                           # Front controller — route dispatcher
+  router.php                          # PHP built-in server router
+  config.php                          # Configuration bootstrap (env + local file)
+  config.local.example.php            # Example local config template
+  .htaccess                           # Apache rewrite + security headers
+  assets/
+    css/
+      style.css                       # Main site (550 lines, responsive, dark)
+      motd.css                        # In-game MOTD styles (27 lines)
+    js/
+      app.js                          # 20s live refresh, map filter, clipboard
+    fonts/
+      barlow-condensed-semibold.ttf   # Display typeface (OFL)
+      ibm-plex-mono-regular.ttf       # Monospace typeface (OFL)
+      ibm-plex-mono-semibold.ttf      # Monospace typeface (OFL)
+  src/
+    DataClient.php                    # Data layer interface
+    LocalDataClient.php               # JSON API dispatcher (9 endpoints)
+    Db.php                            # MySQL PDO queries
+    A2S.php                           # GoldSrc A2S UDP protocol (socket/stream)
+    Steam.php                         # Steam XML profile lookup
+    ApiController.php                 # /api/* JSON output
+    Pages.php                         # Page renderers
+    Motd.php                          # In-game MOTD pages
+    Layout.php                        # HTML shell
+    Support.php                       # Utilities
+    bootstrap.php                     # Autoload
+  README.md                           # This file
+```
 
-Create a MySQL account with only `SELECT` privileges. Replace `WEB_SERVER_IP` with the IP your website connects from. Use `localhost` if the database and website run on the same machine.
+## Installation
+
+### 1. Read-only MySQL User
 
 ```sql
 CREATE USER 'bhop_web_readonly'@'WEB_SERVER_IP'
@@ -45,52 +72,36 @@ TO 'bhop_web_readonly'@'WEB_SERVER_IP';
 FLUSH PRIVILEGES;
 ```
 
-The website expects these tables: `bhop_best`, `bhop_records`, `bhop_players`, `bhop_inventory`, `bhop_market_items`. The website does **not** create schema — `bhop_timer.amxx` is the schema and data owner.
+The website expects these tables: `bhop_best`, `bhop_records`, `bhop_players`, `bhop_inventory`, `bhop_market_items`. The website does not create schema — `bhop_timer.amxx` is the schema and data owner.
 
-If MySQL is on a remote server, also verify:
-
-- MySQL `bind-address` permits the web server's IP
-- Port 3306/TCP is firewalled to the web server's IP only
-- The MySQL user's host portion is correct
-
----
-
-## 2. Configuration
-
-### Local config file
-
-The easiest method:
+### 2. Configuration
 
 ```bash
 cp config.local.example.php config.local.php
 ```
 
-Then edit `config.local.php` with your values. This file is in `.gitignore` and blocked from direct HTTP access.
+Edit `config.local.php` with your values. This file is in `.gitignore` and blocked from HTTP access.
 
-### Environment variables
+### 3. Environment Variables
 
-Environment variables override `config.local.php` values:
+Environment variables override `config.local.php`:
 
-| Variable | Description |
-|---|---|
-| `BHOP_DB_HOST` | MySQL host address |
-| `BHOP_DB_PORT` | MySQL port, default `3306` |
-| `BHOP_DB_DB` | Database name |
-| `BHOP_DB_USER` | Read-only MySQL username |
-| `BHOP_DB_PASS` | MySQL password |
-| `BHOP_DB_PREFIX` | Table prefix — production `bhop_`, test `bmod_test_27016_` |
-| `BHOP_GAME_HOST` | CS 1.6 server hostname/IP for A2S queries |
-| `BHOP_GAME_PORT` | Game/A2S UDP port, default `27016` |
-| `BHOP_PUBLIC_CONNECT` | Public `host:port` string shown to players |
-| `WEBSITE_BASE_URL` | Optional subdirectory, e.g. `/bhop` |
-| `APP_TIMEZONE` | Default `Europe/Istanbul` |
-| `BHOP_STEAM_ENRICHMENT` | Enable Steam profile name/avatar lookup; default off |
+| Variable | Default | Description |
+|---|---|---|
+| `BHOP_DB_HOST` | — | MySQL host |
+| `BHOP_DB_PORT` | `3306` | MySQL port |
+| `BHOP_DB_DB` | — | Database name |
+| `BHOP_DB_USER` | — | Read-only MySQL username |
+| `BHOP_DB_PASS` | — | MySQL password |
+| `BHOP_DB_PREFIX` | `bhop_` | Table prefix |
+| `BHOP_GAME_HOST` | `127.0.0.1` | A2S game server host |
+| `BHOP_GAME_PORT` | `27016` | A2S UDP port |
+| `BHOP_PUBLIC_CONNECT` | — | Public `host:port` for players |
+| `WEBSITE_BASE_URL` | — | Optional subdirectory, e.g. `/bhop` |
+| `APP_TIMEZONE` | `Europe/Istanbul` | Timezone |
+| `BHOP_STEAM_ENRICHMENT` | `false` | Enable Steam profile lookup |
 
-Note: `BHOP_GAME_HOST` can be an internal IP used for A2S. The connection address shown to players is always the separate `BHOP_PUBLIC_CONNECT` value.
-
----
-
-## 3. Local development
+### 4. Local Development
 
 ```bash
 cp config.local.example.php config.local.php
@@ -98,17 +109,13 @@ cp config.local.example.php config.local.php
 php -d extension=sockets -S 127.0.0.1:18082 router.php
 ```
 
-Then open `http://127.0.0.1:18082` and the health check at `http://127.0.0.1:18082/api/status`.
+Open `http://127.0.0.1:18082`. Health check: `http://127.0.0.1:18082/api/status`.
 
----
+### 5. Production Routing
 
-## 4. Production routing
+**Apache:** Point document root to the `website/` directory. `.htaccess` handles rewriting.
 
-### Apache
-
-Point the document root to the `website/` directory. The `.htaccess` file handles rewriting and security.
-
-### Nginx
+**Nginx:**
 
 ```nginx
 location / {
@@ -130,134 +137,80 @@ location ~ \.php$ {
 }
 ```
 
----
+## Configuration Reference
 
-## 5. Health checks and smoke tests
+All settings are defined in `config.php` and overrideable via environment variables or `config.local.php`.
 
-```powershell
-Get-ChildItem . -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }
-php tests/run.php
-```
+### Database
 
-Minimum smoke test set:
-
-```text
-GET /
-GET /api/status
-GET /api/maps
-GET /api/pro15
-GET /profile/<encoded-SteamID2>
-GET /badges
-GET /market
-GET /top-credits
-GET /motd
-GET /motd?map=<map>&mode=normal
-```
-
-`/api/status` response includes:
-
-- `connected: true` — MySQL connection is working
-- `schemaCompatible: true` — Required tables and columns exist
-- `game.online: true` — A2S UDP query received a response
-
----
-
-## Architecture
-
-### File structure
-
-```
-website/
-├── index.php                  # Front controller — route dispatcher
-├── router.php                 # PHP built-in server router (asset passthrough)
-├── config.php                 # Configuration bootstrap (env + local file)
-├── config.local.example.php   # Example local config template
-├── .htaccess                  # Apache rewrite rules + security
-├── assets/
-│   ├── css/
-│   │   ├── style.css          # Main site — 550 lines, dark theme, responsive
-│   │   └── motd.css           # In-game MOTD styles — 27 lines
-│   ├── js/
-│   │   └── app.js             # 20s live refresh, map search filter, clipboard
-│   └── fonts/
-│       ├── barlow-condensed-semibold.ttf  # Display headings (OFL)
-│       ├── ibm-plex-mono-regular.ttf      # Body text (OFL)
-│       └── ibm-plex-mono-semibold.ttf     # Emphasized text (OFL)
-├── src/
-│   ├── DataClient.php         # Data layer interface
-│   ├── LocalDataClient.php    # JSON API dispatcher — 9 endpoints
-│   ├── Db.php                 # MySQL PDO queries — best, records, player, market
-│   ├── A2S.php                # GoldSrc A2S UDP protocol (socket or stream)
-│   ├── Steam.php              # Steam XML profile enrichment
-│   ├── ApiController.php      # /api/* JSON response handler
-│   ├── Pages.php              # Page renderers — home, profile, badges, market, credits
-│   ├── Motd.php               # In-game MOTD — pro15, badges, credits, profile views
-│   ├── Layout.php             # HTML shell — header, footer, alert, nav
-│   ├── Support.php            # Utilities — time formatting, modes, market catalog, badges
-│   └── bootstrap.php          # Autoload and initialization
-└── README.md                  # This file
-```
-
-### Data flow
-
-```
-┌──────────────────────┐
-│   bhop_timer.amxx    │  Writes to MySQL
-│   (CS 1.6 server)    │
-└────────┬─────────────┘
-         │ writes
-         ▼
-┌──────────────────────┐         ┌─────────────────────┐
-│    MySQL Database    │◄────────│  Website (PHP 8.1+) │
-│  bhop_best           │  reads  │                     │
-│  bhop_records        │         │  /api/*  ──► JSON   │
-│  bhop_players        │         │  /       ──► HTML   │
-│  bhop_inventory      │         │  /motd   ──► HTML   │
-│  bhop_market_items   │         │                     │
-└──────────────────────┘         └─────────┬───────────┘
-                                           │ UDP query
-                                           ▼
-                                    ┌──────────────┐
-                                    │  CS 1.6      │
-                                    │  Game Server │
-                                    │  (A2S)       │
-                                    └──────────────┘
-```
-
-### Routing
-
-`index.php` acts as the front controller:
-
-| Path | Handler | Description |
+| Constant | Source | Description |
 |---|---|---|
-| `/` (root) | `Pages::home()` | Main timing page — map grid, pro15, live ticker |
-| `/api/*` | `ApiController::handle()` | JSON API responses |
-| `/profile/{id}` | `Pages::profile()` | Player profile page |
-| `/badges` | `Pages::badges()` | Badge progression ladder |
-| `/market` | `Pages::market()` | Read-only market catalog |
-| `/top-credits` | `Pages::topCredits()` | Credit ranking |
-| `/motd` | `Motd::render()` | In-game MOTD (pro15, badges, topcredits, profile views) |
-| `/map/{map}/{mode}` | Redirect to `/motd?map=...&mode=...` | Legacy URL redirect |
-| 404 fallback | Layout renders 404 page | Unknown routes |
+| `DB_HOST` | `BHOP_DB_HOST` | MySQL host |
+| `DB_PORT` | `BHOP_DB_PORT` | MySQL port |
+| `DB_NAME` | `BHOP_DB_DB` | Database name |
+| `DB_USER` | `BHOP_DB_USER` | MySQL user |
+| `DB_PASS` | `BHOP_DB_PASS` | MySQL password |
+| `DB_TABLE_PREFIX` | `BHOP_DB_PREFIX` | Table prefix (default: `bhop_`) |
+| `DB_CONFIGURED` | — | True when host, name, and user are all set |
 
-### Responsive breakpoints
+### Timer Modes
 
-| Breakpoint | Adjustments |
+| ID | Key | Label | FPS |
+|---|---|---|---|
+| 0 | normal | Normal 131 FPS | 131 |
+| 1 | lowgrav | Low Gravity | 1000 |
+| 2 | dbjump | Double Jump | 1000 |
+| 3 | normal200 | Normal 200 FPS | 200 |
+| 4 | normal333 | Normal 333 FPS | 333 |
+| 5 | normal500 | Normal 500 FPS | 500 |
+| 6 | normal1000 | Normal 1000 FPS | 1000 |
+| 7 | simple | Simple | 0 |
+
+### Badge Thresholds
+
+| Credits | Badge |
 |---|---|
-| Default (>1100px) | Full 4-column layout, side-by-side hero |
-| 1100px | 3-column map grid, header state hidden |
-| 820px | Single-column hero, 2-column map grid, stacked dual-grid |
-| 560px | 1-column everything, compact padding and font sizes |
+| 10 | Bronze I |
+| 50 | Bronze II |
+| 100 | Silver I |
+| 250 | Silver II |
+| 500 | Gold I |
+| 1,000 | Gold II |
+| 2,000 | Platinum I |
+| 5,000 | Platinum II |
+| 10,000 | Diamond I |
+| 20,000 | Diamond II |
 
----
+### Market Catalog
 
-## API reference
+Built-in fallback catalog (16 items). Database rows with matching IDs override name, price, type, and effect:
 
-All API endpoints return `Content-Type: application/json`. CORS headers are set for cross-origin requests.
+| ID | Name | Price | Type |
+|---|---|---|---|
+| 1 | Custom Chat Prefix | 1,000 | custom_prefix |
+| 2 | Custom Join Message | 500 | join_message |
+| 10 | Talon Knife Skin | 2,000 | knife |
+| 11 | Bayonet Knife Skin | 2,000 | knife |
+| 12 | Karambit Knife Skin | 2,000 | knife |
+| 13 | Butterfly Knife Skin | 2,000 | knife |
+| 20 | VIP Gold Knife | 3,000 | vip_skin |
+| 21 | VIP M9 Bayonet | 3,000 | vip_skin |
+| 30 | WR Sound 1 | 1,500 | wrsound |
+| 31 | WR Sound 2 | 1,500 | wrsound |
+| 32 | WR Sound 3 | 1,500 | wrsound |
+| 40 | Red Trail | 1,000 | trail |
+| 41 | Blue Trail | 1,000 | trail |
+| 42 | Green Trail | 1,000 | trail |
+| 43 | Yellow Trail | 1,000 | trail |
+| 44 | Purple Trail | 1,000 | trail |
+
+## API Reference
+
+All API endpoints return `Content-Type: application/json`. CORS headers are set.
 
 ### `GET /api/status`
 
-Health check. Returns MySQL connection state, game server state, and schema compatibility.
+Health check. Returns MySQL connection, game server state, and schema compatibility.
 
 ```json
 {
@@ -278,55 +231,33 @@ Health check. Returns MySQL connection state, game server state, and schema comp
 
 ### `GET /api/maps`
 
-List of all maps with per-mode world record information.
+List all maps with per-mode world record information.
 
-**Query parameters:** none
+### `GET /api/pro15?limit=N`
 
-### `GET /api/pro15?limit={n}`
+Top N players by personal best count. Default 15, max 100.
 
-Global record holders ranked by personal best count.
+### `GET /api/best-records?map=X&mode=Y&limit=N`
 
-| Parameter | Type | Default | Max |
-|---|---|---|---|
-| `limit` | int | 15 | 100 |
+Per-map or global best records. Default 200, max 1000.
 
-### `GET /api/best-records?map={x}&mode={y}&limit={n}`
+### `GET /api/live-ticker?limit=N`
 
-Per-map or global best records.
-
-| Parameter | Type | Default | Max |
-|---|---|---|---|
-| `map` | string | — | — |
-| `mode` | string | — | — |
-| `limit` | int | 200 | 1000 |
-
-Omitting `map` returns records across all maps.
-
-### `GET /api/live-ticker?limit={n}`
-
-Recent finishes with WR/PB tags.
-
-| Parameter | Type | Default | Max |
-|---|---|---|---|
-| `limit` | int | 15 | 100 |
+Recent finishes with WR/PB/FINISH tags. Default 15, max 100.
 
 ### `GET /api/player/{authid}`
 
-Player profile including personal bests, recent records, economy data, and inventory.
+Player profile. Accepts SteamID2, SteamID64 (17 digits), or player_key.
 
-**Path parameter:** SteamID2 (`STEAM_0:1:12345`), SteamID64 (17 digits), or player_key
+Returns bests, recent records, economy data (credits, balance, badge), and inventory.
 
-### `GET /api/top-credits?limit={n}`
+### `GET /api/top-credits?limit=N`
 
-Players ranked by total credits earned.
-
-| Parameter | Type | Default | Max |
-|---|---|---|---|
-| `limit` | int | 15 | 100 |
+Players ranked by total credits earned. Default 15, max 100.
 
 ### `GET /api/market`
 
-Market catalog. Returns the merged result of the built-in fallback catalog and database overrides from `bhop_market_items`.
+Market catalog. Merges built-in fallback with database overrides.
 
 ### `GET /api/badges`
 
@@ -336,81 +267,67 @@ Badge threshold definitions.
 
 Steam profile lookup via Steam community XML. Requires `BHOP_STEAM_ENRICHMENT=true`.
 
-| Parameter | Type | Required |
-|---|---|---|
-| `steamid` | string (17 digits) | Yes |
+## Routing
 
----
+| Path | Handler | Description |
+|---|---|---|
+| `/` | `Pages::home()` | Main timing page |
+| `/api/*` | `ApiController::handle()` | JSON API |
+| `/profile/{id}` | `Pages::profile()` | Player profile |
+| `/badges` | `Pages::badges()` | Badge ladder |
+| `/market` | `Pages::market()` | Market catalog |
+| `/top-credits` | `Pages::topCredits()` | Credit ranking |
+| `/motd` | `Motd::render()` | In-game MOTD |
+| `/map/{map}/{mode}` | Redirect | Legacy URL redirect |
+| 404 | Layout | Not found page |
 
 ## Security
 
-- Grant the website's MySQL user **only** `SELECT` privileges — no `INSERT`, `UPDATE`, `DELETE`, or `DROP`
-- Never write the real password into source code or `config.local.example.php`
-- Never commit or share `config.local.php`
-- Do not expose MySQL port 3306 to the internet — allow only the web server's IP
-- Keep Steam enrichment disabled unless needed; MOTD pages never expect Steam profiles
-- `.htaccess` and `router.php` block direct access to `src/`, `tests/`, config files, `router.php`, and `README.md`
-- Apache: `Header always set X-Content-Type-Options "nosniff"` and `Referrer-Policy "strict-origin-when-cross-origin"` are applied
+-   Grant website MySQL user **only** `SELECT` privileges
+-   Never commit `config.local.php`
+-   Do not expose MySQL port 3306 to the internet
+-   Keep Steam enrichment disabled unless needed
+-   `.htaccess` and `router.php` block direct access to `src/`, `tests/`, config files, and `README.md`
+-   Apache sets `X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin`
 
----
+## Smoke Test
 
-## Market catalog
+```powershell
+Get-ChildItem . -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }
+```
 
-The website includes a read-only fallback of the plugin's current 16-item catalog. Rows from the `bhop_market_items` table with matching IDs override name, price, type, and effect values.
+Minimum smoke test set:
 
-Built-in catalog (fallback):
+```
+GET /
+GET /api/status
+GET /api/maps
+GET /api/pro15
+GET /profile/<encoded-SteamID2>
+GET /badges
+GET /market
+GET /top-credits
+GET /motd
+GET /motd?map=<map>&mode=normal
+```
 
-| ID | Name | Price | Type | Effect |
-|---|---|---|---|---|
-| 1 | Custom Chat Prefix | 1,000 | custom_prefix | 1 |
-| 2 | Custom Join Message | 500 | join_message | 1 |
-| 10 | Talon Knife Skin | 2,000 | knife | 1 |
-| 11 | Bayonet Knife Skin | 2,000 | knife | 2 |
-| 12 | Karambit Knife Skin | 2,000 | knife | 3 |
-| 13 | Butterfly Knife Skin | 2,000 | knife | 4 |
-| 20 | VIP Gold Knife | 3,000 | vip_skin | 5 |
-| 21 | VIP M9 Bayonet | 3,000 | vip_skin | 6 |
-| 30 | WR Sound 1 | 1,500 | wrsound | 1 |
-| 31 | WR Sound 2 | 1,500 | wrsound | 2 |
-| 32 | WR Sound 3 | 1,500 | wrsound | 3 |
-| 40 | Red Trail | 1,000 | trail | 1 |
-| 41 | Blue Trail | 1,000 | trail | 2 |
-| 42 | Green Trail | 1,000 | trail | 3 |
-| 43 | Yellow Trail | 1,000 | trail | 4 |
-| 44 | Purple Trail | 1,000 | trail | 5 |
+Verify in `/api/status`:
 
-Legacy IDs 3–7 were superseded by the current 10–44 catalog and are excluded from the web market display.
+-   `connected: true` — MySQL connection is working
+-   `schemaCompatible: true` — required tables exist
+-   `game.online: true` — A2S UDP responded
 
----
+## Data Flow
 
-## Badge progression
+```
+bhop_timer.amxx  ──writes──►  MySQL Database  ◄──reads──  PHP Website
+(CS 1.6 server)                                    │
+                                                    │ UDP query
+                                                    ▼
+                                             CS 1.6 Game Server
+                                             (A2S response)
+```
 
-| Threshold (credits) | Badge |
-|---|---|
-| 10 | Bronze I |
-| 50 | Bronze II |
-| 100 | Silver I |
-| 250 | Silver II |
-| 500 | Gold I |
-| 1,000 | Gold II |
-| 2,000 | Platinum I |
-| 5,000 | Platinum II |
-| 10,000 | Diamond I |
-| 20,000 | Diamond II |
+## About
 
-Badges track total credits earned. Spending credits never reduces badge progress.
-
----
-
-## Timer modes
-
-| ID | Key | Label | FPS |
-|---|---|---|---|
-| 0 | normal | Normal | 131 |
-| 3 | normal200 | Normal | 200 |
-| 4 | normal333 | Normal | 333 |
-| 5 | normal500 | Normal | 500 |
-| 6 | normal1000 | Normal | 1000 |
-| 1 | lowgrav | Low Gravity | 1000 |
-| 2 | dbjump | Double Jump | 1000 |
-| 7 | simple | Simple | — |
+Standalone PHP 8 leaderboard and MOTD system for ESKIDOSTLAR BHOP CS 1.6 server. MySQL PDO + GoldSrc A2S UDP with JSON API, responsive dark theme, and in-game MOTD pages.
