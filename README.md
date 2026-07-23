@@ -1,276 +1,285 @@
 # ESKIDOSTLAR BHOP
 
-Counter-Strike 1.6 / ReHLDS bhop sunucusu. Timer, ekonomi, özel haritalar ve bağımsız web portalı.
+Counter-Strike 1.6 / ReHLDS bunny hop server. Timer plugin, economy system, custom maps, knife skins, WR sounds, and a standalone web portal.
 
-Bu depo üç ana katmandan oluşur:
+This repository consists of three main layers:
 
-| Katman | Açıklama |
+| Layer | Description |
 |---|---|
-| **AMX Mod X eklentileri** | bhop_timer (fizik + zona + strafe + ekonomi), bhop_map_manager (RTV/nominate), bhop_surf_fix |
-| **Oyun assetleri** | Bhop haritaları (.bsp/.res), knife skin modelleri (.mdl), WR sesleri (.wav), cubemap (.tga) |
-| **Web portalı** | PHP 8.1+ standalone leaderboard; MySQL PDO + GoldSrc A2S UDP; JSON API, MOTD |
+| **AMX Mod X plugins** | bhop_timer (physics + zones + strafe + economy), bhop_map_manager (RTV/nominate), bhop_surf_fix |
+| **Game assets** | Bhop maps (.bsp/.res), knife skin models (.mdl), WR sound effects (.wav), cubemaps (.tga) |
+| **Web portal** | PHP 8.1+ standalone leaderboard; MySQL PDO + GoldSrc A2S UDP; JSON API, MOTD pages |
 
 ---
 
-## İçindekiler
+## Table of contents
 
-- [AMX Mod X eklentileri](#amx-mod-x-eklentileri)
-- [Haritalar ve assetler](#haritalar-ve-assetler)
-- [Web portalı](#web-portalı)
-- [Sunucu kurulumu](#sunucu-kurulumu)
-- [Geliştirme](#geliştirme)
-- [Lisans](#lisans)
+- [AMX Mod X plugins](#amx-mod-x-plugins)
+- [Maps and assets](#maps-and-assets)
+- [Web portal](#web-portal)
+- [Server setup](#server-setup)
+- [Development](#development)
+- [License](#license)
 
 ---
 
-## AMX Mod X eklentileri
+## AMX Mod X plugins
 
 ### bhop_timer (`addons/amxmodx/scripting/bhop_timer.sma`)
 
-Ana timer eklentisi. ReAPI tabanlıdır ve aşağıdaki bileşenlerden oluşur:
+Core timer plugin. ReAPI-based, composed of the following include components:
 
-| Bileşen | Görevi |
+| Component | Purpose |
 |---|---|
-| `physics.inc` | Zıplama fizik motoru, FPS bağımsız hız hesaplaması, strafe/ön-ziplama tespiti |
-| `physics_fixes.inc` | Surf fix, bhop zorluğu ayarı, anti-önyükleme |
-| `zone_embedded.inc` | Start/stop/checkpoint zonları, özel bölge tipleri |
-| `storage.inc` | MySQL PDO bağlantısı, best/record/log yazma, oyuncu profili |
-| `economy.inc` | Credit sistemi, badge/level, market alışverişi, inventory |
-| `badges.inc` | Badge eşikleri (Bronz I → Diamond II), progres sorgulama |
-| `visualization.inc` | HUD göstergeleri, center text, spektrum bilgisi |
-| `editor.inc` | Zona düzenleyici (oyun içi .res dosyası yazma) |
-| `strafe_stats.inc` | Strafe istatistikleri, sync yüzdesi, gain/loss |
-| `mpbhop.inc` | Multi-player bhop (yarış) desteği |
+| `physics.inc` | Jump physics engine, FPS-independent speed calculation, strafe/prestrafe detection |
+| `physics_fixes.inc` | Surf fix, bhop difficulty config, anti-prestrafe |
+| `zone_embedded.inc` | Start/stop/checkpoint zones, custom zone types |
+| `storage.inc` | MySQL PDO connection, best/record/log writes, player profiles |
+| `economy.inc` | Credit system, badge/level progression, in-game market, inventory |
+| `badges.inc` | Badge thresholds (Bronze I → Diamond II), progress queries |
+| `visualization.inc` | HUD displays, center text, spectator info |
+| `editor.inc` | In-game zone editor (.res file writer) |
+| `strafe_stats.inc` | Strafe statistics, sync percentage, gain/loss |
+| `mpbhop.inc` | Multi-player bhop (race) support |
 
-**AMX Mod X sürümü:** 1.9+  
-**ReAPI sürümü:** 5.x
+**AMX Mod X version:** 1.9+  
+**ReAPI version:** 5.x
 
 ### bhop_map_manager (`addons/amxmodx/scripting/bhop_map_manager.sma`)
 
-RTV (Rock the Vote) ve /nominate sistemi.
+RTV (Rock the Vote) and /nominate system.
 
-- `/rtv` — Oy içi harita değiştirme oylaması başlatır (%60 oy gereki)
-- `/nominate` — Oy verme havuzuna harita adayı gösterir
-- `/nextmap` — Sıradaki haritayı gösterir
-- `/timeleft` — Haritada kalan süreyi gösterir
-- Menü tabanlı arayüz, `bmod_menu_style.inc` ile uyumlu
+| Command | Action |
+|---|---|
+| `/rtv` | Starts a map change vote (60% threshold) |
+| `/nominate` | Adds a map to the voting pool |
+| `/nextmap` | Displays the next map |
+| `/timeleft` | Shows remaining time on current map |
+
+- Menu-based interface, compatible with `bmod_menu_style.inc`
+- Vote countdown timer (15 seconds)
+- Nomination deduplication and disabled-item callbacks
+- Mapcycle.txt loader with `cstrike/` and `configs/maps.ini` fallback
 
 ### bhop_surf_fix (`addons/amxmodx/scripting/bhop_surf_fix.sma`)
 
-GoldSrc surf motoru düzeltmesi. Yüzey kayma fiziğini ReAPI ile onarır.
+GoldSrc surf physics fix. Repairs surface sliding behavior using ReAPI hooks.
 
-### Konfigürasyon dosyaları (`addons/amxmodx/configs/`)
+### Configuration files (`addons/amxmodx/configs/`)
 
-| Dosya | Açıklama |
+| File | Description |
 |---|---|
-| `bhop_timer.cfg` | Ana timer ayarları (hız sınırı, zone ayarları, ekonomik değerler) |
-| `bhop_timer_private.cfg.example` | Özel sunucu ayarları (MySQL bilgileri) — asla commit etmeyin |
-| `plugins-bhop_timer.ini` | AMX Mod X plugin aktivasyon listesi |
-| `modules-bhop_timer.ini` | Gerekli modüller (ReAPI, MySQL) |
-| `mpbhop.cfg` | Multi-player bhop ayarları |
+| `bhop_timer.cfg` | Main timer config (speed limits, zone settings, economy values) |
+| `bhop_timer_private.cfg.example` | Private server config (MySQL credentials) — never commit |
+| `plugins-bhop_timer.ini` | AMX Mod X plugin activation list |
+| `modules-bhop_timer.ini` | Required modules (ReAPI, MySQL) |
+| `mpbhop.cfg` | Multi-player bhop settings |
+
+### Market item definitions (`addons/amxmodx/data/bhop_timer/market_items.ini`)
+
+Static definition file for the 16-item in-game market catalog. Database overrides take precedence when `bhop_market_items` table is populated.
 
 ---
 
-## Haritalar ve assetler
+## Maps and assets
 
-### Özel haritalar (`bhop_maps/maps/`)
+### Custom maps (`bhop_maps/maps/`)
 
-14 adet özel bhop haritası, zorluk seviyelerine göre:
+17 custom bhop maps across all difficulty levels:
 
-| Harita | Zorluk | Özellik |
+| Map | Difficulty | Notes |
 |---|---|---|
-| `bhop_m_novice` | Başlangıç | Kısa rota, geniş zeminler |
-| `bhop_m_novice2` | Başlangıç | Alternatif başlangıç rotası |
-| `bhop_m_skill` | Orta | Standart skill rotası |
-| `bhop_m_skill2` | Orta | İkinci skill rotası |
-| `bhop_m_skill3` | Orta-İleri | Üçüncü skill rotası |
-| `bhop_m_skill4` | Orta-İleri | Dördüncü skill rotası (özel .res dosyası) |
-| `bhop_m_skill_pro` | İleri | Profesyonel skill rotası |
-| `bhop_m_fire` | Orta | Ateş temalı harita |
-| `bhop_m_factory` | Orta | Fabrika temalı harita |
-| `bhop_m_lab` | Orta | Laboratuvar temalı harita (özel .res) |
-| `bhop_m_temple` | Orta | Tapınak temalı (cubemap + özel .res) |
-| `bhop_m_wild` | Orta | Vahşi batı temalı |
-| `bhop_m_ramp` | Başlangıç | Rampa mekaniği öğrenme |
-| `bhop_m_ramp_old` | Başlangıç | Eski rampa rotası |
-| `bhop_m_ramp2` | Başlangıç | İkinci rampa rotası |
-| `bhop_m_ramp_pro` | Orta | Profesyonel rampa rotası |
-| `bhop_m_target` | Orta | Hedef/nişan mekaniği |
+| `bhop_m_novice` | Beginner | Short route, wide platforms |
+| `bhop_m_novice2` | Beginner | Alternative beginner route |
+| `bhop_m_skill` | Intermediate | Standard skill route |
+| `bhop_m_skill2` | Intermediate | Second skill route |
+| `bhop_m_skill3` | Intermediate-Advanced | Third skill route |
+| `bhop_m_skill4` | Intermediate-Advanced | Fourth skill route (custom .res) |
+| `bhop_m_skill_pro` | Advanced | Professional skill route |
+| `bhop_m_fire` | Intermediate | Fire-themed map |
+| `bhop_m_factory` | Intermediate | Factory-themed map |
+| `bhop_m_lab` | Intermediate | Laboratory-themed (custom .res) |
+| `bhop_m_temple` | Intermediate | Temple-themed (cubemap + custom .res) |
+| `bhop_m_wild` | Intermediate | Wild West-themed |
+| `bhop_m_ramp` | Beginner | Ramp mechanics training |
+| `bhop_m_ramp_old` | Beginner | Legacy ramp route |
+| `bhop_m_ramp2` | Beginner | Second ramp route |
+| `bhop_m_ramp_pro` | Intermediate | Professional ramp route |
+| `bhop_m_target` | Intermediate | Target/aim mechanics |
 
-Her harita için `.txt` dosyası harita yapımcısı kredisi ve bilgilerini içerir. `.res` dosyası gerekli özel dosyaları (ses, model) tanımlar.
+Each map has a `.txt` file containing map author credits. `.res` files define required custom assets (sounds, models).
 
 ### Cubemap (`bhop_maps/gfx/env/`)
 
-`bhop_m_temple` haritası için özel cubemap (6 yüz .tga).
+Custom 6-face cubemap for `bhop_m_temple`:
+- `bhop_m_templebk.tga`, `bhop_m_templedn.tga`, `bhop_m_templeft.tga`
+- `bhop_m_templelf.tga`, `bhop_m_templert.tga`, `bhop_m_templeup.tga`
 
-### Sesler (`bhop_maps/sound/`)
+### Map-specific sounds (`bhop_maps/sound/`)
 
 - `bhop_m_skill2/anthemcollides.wav`
 - `bhop_m_skill4/rokdahouse.wav`
 
-### Knife skin modelleri (`models/knifes/`)
+### Knife skin models (`models/knifes/`)
 
-| Klasör | Model | Tip |
+| Directory | Model | Type |
 |---|---|---|
-| `talon_ed/` | Talon bıçağı | Normal skin |
-| `bayonet_ed/` | Bayonet bıçağı | Normal skin |
-| `karambit_ed/` | Karambit bıçağı | Normal skin |
-| `butterfly_ed/` | Butterfly bıçağı | Normal skin |
-| `vipgold_ed/` | Altın bıçak | VIP skin |
+| `talon_ed/` | Talon knife | Standard skin |
+| `bayonet_ed/` | Bayonet knife | Standard skin |
+| `karambit_ed/` | Karambit knife | Standard skin |
+| `butterfly_ed/` | Butterfly knife | Standard skin |
+| `vipgold_ed/` | Gold knife | VIP skin |
 | `vipm9_ed/` | M9 Bayonet | VIP skin |
 
-Her skin için `v_knife.mdl` (1. person) ve `p_knife.mdl` (dünya modeli) bulunur.
+Each skin includes `v_knife.mdl` (first-person) and `p_knife.mdl` (world model).
 
-### WR sesleri (`sound/ed/`)
+### WR sounds (`sound/ed/`)
 
-Dünya rekoru kırıldığında çalan üç farklı ses efekti:
+Three distinct sound effects played when a world record is broken:
 - `wr1.wav`, `wr2.wav`, `wr3.wav`
 
 ---
 
-## Web portalı
+## Web portal
 
-Detaylı belgeler: [`website/README.md`](website/README.md)
+Full documentation: [`website/README.md`](website/README.md)
 
-Özet:
+Snapshot:
 
 ```
 website/
-├── index.php              # Front controller (routing)
-├── router.php             # PHP built-in server router
-├── config.php             # Yapılandırma (env + local file override)
-├── config.local.example.php  # Örnek yerel yapılandırma (commit edilmez)
-├── .htaccess              # Apache rewrite + güvenlik
+├── index.php                  # Front controller (route dispatcher)
+├── router.php                 # PHP built-in server router
+├── config.php                 # Configuration (env + local file override)
+├── config.local.example.php   # Example local config (never committed)
+├── .htaccess                  # Apache rewrite rules + security headers
 ├── assets/
 │   ├── css/
-│   │   ├── style.css      # Ana site stilleri (550 satır, responsive)
-│   │   └── motd.css       # MOTD stilleri (27 satır)
+│   │   ├── style.css          # Main site styles (responsive, 550 lines)
+│   │   └── motd.css           # MOTD styles (27 lines)
 │   ├── js/
-│   │   └── app.js         # Canlı yenileme (20s aralık), map filter, copy
+│   │   └── app.js             # Live auto-refresh (20s interval), map filter, clipboard
 │   └── fonts/
-│       ├── barlow-condensed-semibold.ttf  # Display font (OFL lisanslı)
-│       ├── ibm-plex-mono-regular.ttf      # Monospace font (OFL lisanslı)
-│       └── ibm-plex-mono-semibold.ttf     # Monospace font (OFL lisanslı)
+│       ├── barlow-condensed-semibold.ttf  # Display typeface (OFL-licensed)
+│       ├── ibm-plex-mono-regular.ttf      # Monospace typeface (OFL-licensed)
+│       └── ibm-plex-mono-semibold.ttf     # Monospace typeface (OFL-licensed)
 ├── src/
-│   ├── DataClient.php     # Veri katmanı interface
-│   ├── LocalDataClient.php # JSON API dispatcher (9 endpoint)
-│   ├── Db.php             # MySQL PDO sorguları (best, records, player, market)
-│   ├── A2S.php            # GoldSrc A2S UDP protokolü (socket/stream)
-│   ├── Steam.php          # Steam XML profil sorgulama
-│   ├── ApiController.php  # /api/* JSON çıktısı
-│   ├── Pages.php          # Sayfa render (home, profile, badges, market)
-│   ├── Motd.php           # Oyun içi MOTD sayfaları
-│   ├── Layout.php         # HTML layout (header, footer, alert)
-│   ├── Support.php        # Yardımcı fonksiyonlar (time, mode, catalog, badges)
-│   └── bootstrap.php      # Otoload ve başlangıç
-└── README.md              # Web portalı kurulum belgeleri
+│   ├── DataClient.php         # Data layer interface
+│   ├── LocalDataClient.php    # JSON API dispatcher (9 endpoints)
+│   ├── Db.php                 # MySQL PDO queries (best, records, player, market)
+│   ├── A2S.php                # GoldSrc A2S UDP protocol (socket or stream)
+│   ├── Steam.php              # Steam XML profile lookup
+│   ├── ApiController.php      # /api/* JSON output
+│   ├── Pages.php              # Page renderers (home, profile, badges, market)
+│   ├── Motd.php               # In-game MOTD pages (pro15, badges, credits, profile)
+│   ├── Layout.php             # HTML layout (header, footer, alert, nav)
+│   ├── Support.php            # Utilities (time formatting, modes, market catalog, badges)
+│   └── bootstrap.php          # Autoload and initialization
+└── README.md                  # Web portal setup documentation
 ```
 
-### Özellikler
+### Features
 
-- **Salt-okunur MySQL** — Timer plugin veri yazar, web yalnız okur
-- **A2S UDP** — Oyun sunucusunu canlı sorgulama (oyuncu listesi, harita, online durumu)
-- **20 saniye aralıklı canlı yenileme** — Oyun içi değişiklikler webde anlık görünür
+- **Read-only MySQL** — Timer plugin writes data, web layer only reads
+- **GoldSrc A2S UDP** — Live server queries (player list, current map, online status)
+- **20-second auto-refresh** — Server changes reflect on the web in near real-time
 - **JSON API** — `/api/status`, `/api/pro15`, `/api/maps`, `/api/best-records`, `/api/player`, `/api/top-credits`, `/api/market`, `/api/badges`, `/api/live-ticker`
-- **Tam responsive** — 560px → 1440px+ arası tüm ekranlar
-- **Oyun içi MOTD** — `/motd?view=pro15|badges|topcredits|profile`
-- **Ekonomi profilleri** — Credit bakiyesi, badge progresi, inventory görüntüleme
+- **Fully responsive** — 560px → 1440px+ viewports
+- **In-game MOTD** — `/motd?view=pro15|badges|topcredits|profile`
+- **Player economy profiles** — Credit balance, badge progress, inventory view
 
-### Hızlı başlangıç (web)
+### Quick start (web)
 
-```powershell
+```bash
 cd website
-Copy-Item config.local.example.php config.local.php
-# config.local.php içinde MySQL ve sunucu bilgilerini düzenleyin
+cp config.local.example.php config.local.php
+# Edit config.local.php — set MySQL and game server values
 php -d extension=sockets -S 127.0.0.1:18082 router.php
 ```
 
-Ardından `http://127.0.0.1:18082` adresini açın.
+Open `http://127.0.0.1:18082` in your browser. Health check at `http://127.0.0.1:18082/api/status`.
 
 ---
 
-## Sunucu kurulumu
+## Server setup
 
-1. **AMX Mod X 1.9+** ve **ReAPI 5.x** kurulu bir CS 1.6/ReHLDS sunucusu
-2. `addons/amxmodx/` içindeki dosyaları sunucuya kopyalayın
-3. `bhop_maps/maps/` içindeki `.bsp` dosyalarını `cstrike/maps/` klasörüne kopyalayın
-4. Özel assetler (`models/`, `sound/`, `bhop_maps/gfx/`, `bhop_maps/sound/`) ilgili klasörlere kopyalayın
-5. MySQL veritabanı oluşturun ve `bhop_timer.cfg` içindeki bağlantı bilgilerini ayarlayın
-6. Web portalı için yukarıdaki adımları izleyin
-7. Harita döngüsü için bir `mapcycle.txt` dosyası oluşturun
+1. A CS 1.6 / ReHLDS server with **AMX Mod X 1.9+** and **ReAPI 5.x**
+2. Copy `addons/amxmodx/` to your server's `cstrike/` directory
+3. Copy `.bsp` files from `bhop_maps/maps/` to `cstrike/maps/`
+4. Copy custom assets (`models/`, `sound/`, `bhop_maps/gfx/`, `bhop_maps/sound/`) to corresponding directories
+5. Create a MySQL database and configure credentials in `bhop_timer.cfg`
+6. Set up the web portal following the quick start above
+7. Create a `mapcycle.txt` with your desired map rotation
 
-### Market sistemi
+### In-game market
 
-Oyun içi market, `bhop_timer` eklentisinin `economy.inc` bileşeni tarafından yönetilir. 16 ürünlük katalog:
+The market system is managed by `economy.inc` within the `bhop_timer` plugin. 16 products:
 
-| ID | Ürün | Fiyat | Tür |
+| ID | Product | Price | Type |
 |---|---|---|---|
-| 1 | Custom Chat Prefix | 1.000 CR | custom_prefix |
+| 1 | Custom Chat Prefix | 1,000 CR | custom_prefix |
 | 2 | Custom Join Message | 500 CR | join_message |
-| 10 | Talon Knife Skin | 2.000 CR | knife |
-| 11 | Bayonet Knife Skin | 2.000 CR | knife |
-| 12 | Karambit Knife Skin | 2.000 CR | knife |
-| 13 | Butterfly Knife Skin | 2.000 CR | knife |
-| 20 | VIP Gold Knife | 3.000 CR | vip_skin |
-| 21 | VIP M9 Bayonet | 3.000 CR | vip_skin |
-| 30–32 | WR Sound 1–3 | 1.500 CR | wrsound |
-| 40–44 | Trail (5 renk) | 1.000 CR | trail |
+| 10 | Talon Knife Skin | 2,000 CR | knife |
+| 11 | Bayonet Knife Skin | 2,000 CR | knife |
+| 12 | Karambit Knife Skin | 2,000 CR | knife |
+| 13 | Butterfly Knife Skin | 2,000 CR | knife |
+| 20 | VIP Gold Knife | 3,000 CR | vip_skin |
+| 21 | VIP M9 Bayonet | 3,000 CR | vip_skin |
+| 30–32 | WR Sound 1–3 | 1,500 CR | wrsound |
+| 40–44 | Trail (5 colors) | 1,000 CR | trail |
 
 ---
 
-## Geliştirme
+## Development
 
-### Bağımlılıklar
+### Dependencies
 
 - **AMX Mod X 1.9+** — `amxmodx`, `amxmisc`, `fakemeta`, `cstrike`, `hamsandwich`
-- **ReAPI 5.x** — `reapi` (`reapi.inc` ve alt modülleri)
-- **MySQL** — Eklenti MySQL veritabanı kullanır (`storage.inc`)
-- **PHP 8.1+** — Web portalı için
-- **MySQL 5.7+/MariaDB 10.3+** — Web portalı için
+- **ReAPI 5.x** — `reapi` module (`reapi.inc` and sub-includes)
+- **MySQL** — Plugin uses MySQL database (`storage.inc`)
+- **PHP 8.1+** — Web portal runtime
+- **MySQL 5.7+ / MariaDB 10.3+** — Web portal database
 
-### Derleme
-
-AMX Mod X eklentilerini derlemek için:
+### Compiling AMX Mod X plugins
 
 ```bash
-# amxxpc kullanarak
 amxxpc bhop_timer.sma
 amxxpc bhop_map_manager.sma
 amxxpc bhop_surf_fix.sma
 ```
 
-Derlenmiş `.amxx` dosyaları `addons/amxmodx/plugins/` klasörüne kopyalanır.
+Compiled `.amxx` files go to `addons/amxmodx/plugins/`.
 
-### Web portalı lint
+### Web portal lint
 
 ```powershell
 Get-ChildItem . -Recurse -Filter *.php | ForEach-Object { php -l $_.FullName }
 ```
 
-### API uç noktaları
+### API endpoints
 
-| Yöntem | Uç nokta | Açıklama |
+| Method | Endpoint | Description |
 |---|---|---|
-| GET | `/api/status` | MySQL bağlantısı, A2S oyun durumu, şema uyumu |
-| GET | `/api/maps` | Harita listesi + her mod için WR bilgisi |
-| GET | `/api/pro15?limit=N` | En çok PB'ye sahip ilk N oyuncu |
-| GET | `/api/best-records?map=X&mode=Y&limit=N` | Harita/mode göre sıralama |
-| GET | `/api/live-ticker?limit=N` | Son N bitiriş (WR/PB/Finish) |
-| GET | `/api/player/{authid}` | Oyuncu profili (bests, records, inventory) |
-| GET | `/api/top-credits?limit=N` | Credit sıralaması |
-| GET | `/api/market` | Market kataloğu |
-| GET | `/api/badges` | Badge eşikleri |
-| GET | `/api/steam-profile?steamid={64}` | Steam XML profil sorgusu |
+| GET | `/api/status` | MySQL connection, A2S game status, schema compatibility |
+| GET | `/api/maps` | Map list with per-mode WR info |
+| GET | `/api/pro15?limit=N` | Top N players by personal best count |
+| GET | `/api/best-records?map=X&mode=Y&limit=N` | Per-map, per-mode leaderboard |
+| GET | `/api/live-ticker?limit=N` | Last N finishes (WR/PB/Finish) |
+| GET | `/api/player/{authid}` | Player profile (bests, records, inventory) |
+| GET | `/api/top-credits?limit=N` | Credit ranking |
+| GET | `/api/market` | Market catalog |
+| GET | `/api/badges` | Badge thresholds |
+| GET | `/api/steam-profile?steamid={64}` | Steam XML profile lookup |
 
 ---
 
-## Lisans
+## License
 
-Bu proje özel bir CS 1.6 bhop sunucusu içindir.
+This project is a private CS 1.6 bunny hop server.
 
-- **Barlow Condensed** fontu — SIL Open Font License 1.1 (Copyright 2017 The Barlow Project Authors)
-- **IBM Plex Mono** fontu — SIL Open Font License 1.1 (Copyright © 2017 IBM Corp.)
-- **Haritalar** — Zerotech (petersam1980@gmail.com) tarafından geliştirilmiştir
-- **Bhop timer eklentisi** — Özel geliştirme, tüm hakları saklıdır
-- **Knife skin modelleri** — Özel tasarım, tüm hakları saklıdır
-- **WR ses efektleri** — Özel ses dosyaları, tüm hakları saklıdır
+- **Barlow Condensed** font — SIL Open Font License 1.1 (Copyright 2017 The Barlow Project Authors)
+- **IBM Plex Mono** font — SIL Open Font License 1.1 (Copyright © 2017 IBM Corp.)
+- **Custom maps** — Developed by Zerotech (petersam1980@gmail.com)
+- **Bhop timer plugin** — Proprietary development, all rights reserved
+- **Knife skin models** — Custom design, all rights reserved
+- **WR sound effects** — Custom audio files, all rights reserved
